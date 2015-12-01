@@ -193,6 +193,7 @@ struct _GLFWctxconfig
     int           robustness;
     int           release;
     _GLFWwindow*  share;
+    int useexternalhandle;
 };
 
 
@@ -243,6 +244,7 @@ struct _GLFWwindow
     GLFWvidmode         videoMode;
     _GLFWmonitor*       monitor;
     _GLFWcursor*        cursor;
+    int has_external_handle;
 
     // Window input state
     GLboolean           stickyKeys;
@@ -334,6 +336,7 @@ struct _GLFWlibrary
         _GLFWwndconfig  window;
         _GLFWctxconfig  context;
         int             refreshRate;
+        int             useexternalhandle;
     } hints;
 
     double              cursorPosX, cursorPosY;
@@ -505,7 +508,8 @@ void _glfwPlatformSetTime(double time);
 int _glfwPlatformCreateWindow(_GLFWwindow* window,
                               const _GLFWwndconfig* wndconfig,
                               const _GLFWctxconfig* ctxconfig,
-                              const _GLFWfbconfig* fbconfig);
+                              const _GLFWfbconfig* fbconfig,
+                              void* externalHandle);
 
 /*! @ingroup platform
  */
@@ -589,6 +593,8 @@ int _glfwPlatformWindowVisible(_GLFWwindow* window);
  *  @ingroup platform
  */
 void _glfwPlatformPollEvents(void);
+
+void _glfw_custom_poll(_GLFWwindow* window,unsigned int uMsg,unsigned int wparam,long lparam);
 
 /*! @copydoc glfwWaitEvents
  *  @ingroup platform

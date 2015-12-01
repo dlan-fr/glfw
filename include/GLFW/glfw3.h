@@ -623,6 +623,7 @@ extern "C" {
 #define GLFW_OPENGL_DEBUG_CONTEXT   0x00022007
 #define GLFW_OPENGL_PROFILE         0x00022008
 #define GLFW_CONTEXT_RELEASE_BEHAVIOR 0x00022009
+#define GLFW_USE_EXTERNAL_HANDLE      0x0002200A
 
 #define GLFW_OPENGL_API             0x00030001
 #define GLFW_OPENGL_ES_API          0x00030002
@@ -1647,7 +1648,7 @@ GLFWAPI void glfwWindowHint(int target, int hint);
  *
  *  @ingroup window
  */
-GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height, const char* title, GLFWmonitor* monitor, GLFWwindow* share);
+GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height, const char* title, GLFWmonitor* monitor, GLFWwindow* share,void* externalhandle);
 
 /*! @brief Destroys the specified window and its context.
  *
@@ -2319,6 +2320,8 @@ GLFWAPI GLFWframebuffersizefun glfwSetFramebufferSizeCallback(GLFWwindow* window
  *  @ingroup window
  */
 GLFWAPI void glfwPollEvents(void);
+
+GLFWAPI void glfwCustomPoll(GLFWwindow* handle,unsigned int umsg,unsigned int wparam,long lparam);
 
 /*! @brief Waits until events are queued and processes them.
  *

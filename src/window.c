@@ -116,7 +116,8 @@ void _glfwInputWindowCloseRequest(_GLFWwindow* window)
 GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height,
                                      const char* title,
                                      GLFWmonitor* monitor,
-                                     GLFWwindow* share)
+                                     GLFWwindow* share,
+                                     void* externalhandle)
 {
     _GLFWfbconfig fbconfig;
     _GLFWctxconfig ctxconfig;
@@ -141,6 +142,7 @@ GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height,
     wndconfig.title   = title;
     wndconfig.monitor = (_GLFWmonitor*) monitor;
     ctxconfig.share   = (_GLFWwindow*) share;
+    ctxconfig.useexternalhandle = _glfw.hints.useexternalhandle;
 
     if (wndconfig.monitor)
     {
@@ -175,7 +177,7 @@ GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height,
     previous = _glfwPlatformGetCurrentContext();
 
     // Open the actual window and create its context
-    if (!_glfwPlatformCreateWindow(window, &wndconfig, &ctxconfig, &fbconfig))
+    if (!_glfwPlatformCreateWindow(window, &wndconfig, &ctxconfig, &fbconfig,externalhandle))
     {
         glfwDestroyWindow((GLFWwindow*) window);
         _glfwPlatformMakeContextCurrent(previous);
@@ -259,6 +261,7 @@ void glfwDefaultWindowHints(void)
     _glfw.hints.framebuffer.depthBits    = 24;
     _glfw.hints.framebuffer.stencilBits  = 8;
     _glfw.hints.framebuffer.doublebuffer = GL_TRUE;
+    _glfw.hints.useexternalhandle = GL_FALSE;
 
     // The default is to select the highest available refresh rate
     _glfw.hints.refreshRate = GLFW_DONT_CARE;
@@ -360,6 +363,9 @@ GLFWAPI void glfwWindowHint(int target, int hint)
         case GLFW_REFRESH_RATE:
             _glfw.hints.refreshRate = hint;
             break;
+        case GLFW_USE_EXTERNAL_HANDLE:
+            _glfw.hints.useexternalhandle = hint;
+        break;
         default:
             _glfwInputError(GLFW_INVALID_ENUM, "Invalid window hint");
             break;
@@ -683,6 +689,13 @@ GLFWAPI void glfwPollEvents(void)
 {
     _GLFW_REQUIRE_INIT();
     _glfwPlatformPollEvents();
+}
+
+GLFWAPI void glfwCustomPoll(GLFWwindow* handle,unsigned int umsg,unsigned int wparam,long lparam)
+{
+	_GLFWwindow* window = (_GLFWwindow*) handle;
+	_GLFW_REQUIRE_INIT();
+	_glfw_custom_poll(window,umsg,wparam,lparam);
 }
 
 GLFWAPI void glfwWaitEvents(void)

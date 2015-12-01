@@ -261,10 +261,12 @@ static void leaveFullscreenMode(_GLFWwindow* window)
 
 // Window callback function (handles window events)
 //
+
+
 static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
                                    WPARAM wParam, LPARAM lParam)
 {
-    _GLFWwindow* window = (_GLFWwindow*) GetWindowLongPtrW(hWnd, 0);
+	 _GLFWwindow* window = (_GLFWwindow*) GetWindowLongPtrW(hWnd, 0);
 
     switch (uMsg)
     {
@@ -629,8 +631,200 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         }
     }
 
-    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
+
+static LRESULT handle_input(_GLFWwindow* window,UINT uMsg,WPARAM wParam,LPARAM lParam)
+{
+	HWND hWnd = window->win32.handle;
+
+    switch (uMsg)
+    {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        {
+            const int scancode = (lParam >> 16) & 0x1ff;
+           // const int key = translateKey(wParam, lParam);
+			const int key = (int)wParam;
+            if (key == _GLFW_KEY_INVALID)
+                break;
+
+            _glfwInputKey(window, key, scancode, GLFW_PRESS, getKeyMods());
+            break;
+        }
+
+        case WM_CHAR:
+        {
+            _glfwInputChar(window, (unsigned int) wParam, getKeyMods(), GL_TRUE);
+            return 0;
+        }
+
+        case WM_SYSCHAR:
+        {
+            _glfwInputChar(window, (unsigned int) wParam, getKeyMods(), GL_FALSE);
+            return 0;
+        }
+
+        case WM_UNICHAR:
+        {
+            // This message is not sent by Windows, but is sent by some
+            // third-party input method engines
+
+            if (wParam == UNICODE_NOCHAR)
+            {
+                // Returning TRUE here announces support for this message
+                return TRUE;
+            }
+
+            _glfwInputChar(window, (unsigned int) wParam, getKeyMods(), GL_TRUE);
+            return FALSE;
+        }
+
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+        {
+            const int mods = getKeyMods();
+            const int scancode = (lParam >> 16) & 0x1ff;
+            //const int key = translateKey(wParam, lParam);
+			const int key = (int)wParam;
+            if (key == _GLFW_KEY_INVALID)
+                break;
+
+            if (wParam == VK_SHIFT)
+            {
+                // Release both Shift keys on Shift up event, as only one event
+                // is sent even if both keys are released
+                _glfwInputKey(window, GLFW_KEY_LEFT_SHIFT, scancode, GLFW_RELEASE, mods);
+                _glfwInputKey(window, GLFW_KEY_RIGHT_SHIFT, scancode, GLFW_RELEASE, mods);
+            }
+            else if (wParam == VK_SNAPSHOT)
+            {
+                // Key down is not reported for the print screen key
+                _glfwInputKey(window, key, scancode, GLFW_PRESS, mods);
+                _glfwInputKey(window, key, scancode, GLFW_RELEASE, mods);
+            }
+            else
+                _glfwInputKey(window, key, scancode, GLFW_RELEASE, mods);
+
+            break;
+        }
+
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONDOWN:
+        case WM_MBUTTONDOWN:
+        case WM_XBUTTONDOWN:
+        {
+            const int mods = getKeyMods();
+
+            SetCapture(hWnd);
+
+            if (uMsg == WM_LBUTTONDOWN)
+                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS, mods);
+            else if (uMsg == WM_RBUTTONDOWN)
+                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS, mods);
+            else if (uMsg == WM_MBUTTONDOWN)
+                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_MIDDLE, GLFW_PRESS, mods);
+            else
+            {
+                if (HIWORD(wParam) == XBUTTON1)
+                    _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_4, GLFW_PRESS, mods);
+                else if (HIWORD(wParam) == XBUTTON2)
+                    _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_5, GLFW_PRESS, mods);
+
+                return TRUE;
+            }
+
+            return 0;
+        }
+
+        case WM_LBUTTONUP:
+        case WM_RBUTTONUP:
+        case WM_MBUTTONUP:
+        case WM_XBUTTONUP:
+        {
+            const int mods = getKeyMods();
+
+            ReleaseCapture();
+
+            if (uMsg == WM_LBUTTONUP)
+                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE, mods);
+            else if (uMsg == WM_RBUTTONUP)
+                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE, mods);
+            else if (uMsg == WM_MBUTTONUP)
+                _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_MIDDLE, GLFW_RELEASE, mods);
+            else
+            {
+                if (HIWORD(wParam) == XBUTTON1)
+                    _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_4, GLFW_RELEASE, mods);
+                else if (HIWORD(wParam) == XBUTTON2)
+                    _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_5, GLFW_RELEASE, mods);
+
+                return TRUE;
+            }
+
+            return 0;
+        }
+
+        case WM_MOUSEMOVE:
+        {
+            const int x = GET_X_LPARAM(lParam);
+            const int y = GET_Y_LPARAM(lParam);
+
+            if (window->cursorMode == GLFW_CURSOR_DISABLED)
+            {
+                if (_glfw.cursorWindow != window)
+                    break;
+
+                _glfwInputCursorMotion(window,
+                                       x - window->win32.cursorPosX,
+                                       y - window->win32.cursorPosY);
+            }
+            else
+                _glfwInputCursorMotion(window, x, y);
+
+            window->win32.cursorPosX = x;
+            window->win32.cursorPosY = y;
+
+            if (!window->win32.cursorTracked)
+            {
+                TRACKMOUSEEVENT tme;
+                ZeroMemory(&tme, sizeof(tme));
+                tme.cbSize = sizeof(tme);
+                tme.dwFlags = TME_LEAVE;
+                tme.hwndTrack = window->win32.handle;
+                TrackMouseEvent(&tme);
+
+                window->win32.cursorTracked = GL_TRUE;
+                _glfwInputCursorEnter(window, GL_TRUE);
+            }
+
+            return 0;
+        }
+
+        case WM_MOUSELEAVE:
+        {
+            window->win32.cursorTracked = GL_FALSE;
+            _glfwInputCursorEnter(window, GL_FALSE);
+            return 0;
+        }
+
+        case WM_MOUSEWHEEL:
+        {
+            _glfwInputScroll(window, 0.0, (SHORT) HIWORD(wParam) / (double) WHEEL_DELTA);
+            return 0;
+        }
+
+        case WM_MOUSEHWHEEL:
+        {
+            // This message is only sent on Windows Vista and later
+            // NOTE: The X-axis is inverted for consistency with OS X and X11.
+            _glfwInputScroll(window, -((SHORT) HIWORD(wParam) / (double) WHEEL_DELTA), 0.0);
+            return 0;
+        }
+    }
+
+}
+
 
 // Translate client window size to full window size (including window borders)
 //
@@ -654,7 +848,8 @@ static int createWindow(_GLFWwindow* window,
 {
     int xpos, ypos, fullWidth, fullHeight;
     WCHAR* wideTitle;
-
+    
+    
     if (wndconfig->monitor)
     {
         GLFWvidmode mode;
@@ -697,6 +892,7 @@ static int createWindow(_GLFWwindow* window,
                                            window); // Pass object to WM_CREATE
 
     free(wideTitle);
+    window->has_external_handle = GL_FALSE;
 
     if (!window->win32.handle)
     {
@@ -730,17 +926,51 @@ static int createWindow(_GLFWwindow* window,
     return GL_TRUE;
 }
 
+static int createFromExternalHandle(_GLFWwindow* window,
+                        const _GLFWwndconfig* wndconfig,
+                        const _GLFWctxconfig* ctxconfig,
+                        const _GLFWfbconfig* fbconfig,
+                        void* externalHandle)
+{              
+    window->win32.handle = externalHandle;
+    window->has_external_handle = GL_TRUE;
+
+    if (!window->win32.handle)
+    {
+        _glfwInputError(GLFW_PLATFORM_ERROR, "Win32: External handle is invalid!");
+        return GL_FALSE;
+    }
+
+    if (_glfw_ChangeWindowMessageFilterEx)
+    {
+        _glfw_ChangeWindowMessageFilterEx(window->win32.handle,
+                                          WM_DROPFILES, MSGFLT_ALLOW, NULL);
+        _glfw_ChangeWindowMessageFilterEx(window->win32.handle,
+                                          WM_COPYDATA, MSGFLT_ALLOW, NULL);
+        _glfw_ChangeWindowMessageFilterEx(window->win32.handle,
+                                          WM_COPYGLOBALDATA, MSGFLT_ALLOW, NULL);
+    }
+
+    DragAcceptFiles(window->win32.handle, TRUE);
+
+    if (!_glfwCreateContext(window, ctxconfig, fbconfig))
+        return GL_FALSE;
+
+    return GL_TRUE;
+} 
+
 // Destroys the GLFW window and rendering context
 //
 static void destroyWindow(_GLFWwindow* window)
 {
     _glfwDestroyContext(window);
 
-    if (window->win32.handle)
+    if (window->win32.handle && !window->has_external_handle)
     {
         DestroyWindow(window->win32.handle);
-        window->win32.handle = NULL;
     }
+    
+    window->win32.handle = NULL;
 }
 
 
@@ -797,12 +1027,21 @@ void _glfwUnregisterWindowClass(void)
 int _glfwPlatformCreateWindow(_GLFWwindow* window,
                               const _GLFWwndconfig* wndconfig,
                               const _GLFWctxconfig* ctxconfig,
-                              const _GLFWfbconfig* fbconfig)
+                              const _GLFWfbconfig* fbconfig,
+                              void* externalHandle)
 {
     int status;
 
-    if (!createWindow(window, wndconfig, ctxconfig, fbconfig))
-        return GL_FALSE;
+    if(externalHandle == NULL)
+    {
+        if (!createWindow(window, wndconfig, ctxconfig, fbconfig))
+            return GL_FALSE;
+    }
+    else
+    {
+         if (!createFromExternalHandle(window, wndconfig, ctxconfig, fbconfig,externalHandle))
+            return GL_FALSE;
+    }
 
     status = _glfwAnalyzeContext(window, ctxconfig, fbconfig);
 
@@ -836,8 +1075,16 @@ int _glfwPlatformCreateWindow(_GLFWwindow* window,
         destroyWindow(window);
 
         // ...and then create them again, this time with better APIs
-        if (!createWindow(window, wndconfig, ctxconfig, fbconfig))
-            return GL_FALSE;
+        if(externalHandle == NULL)
+		{
+			if (!createWindow(window, wndconfig, ctxconfig, fbconfig))
+				return GL_FALSE;
+		}
+		else
+		{
+			 if (!createFromExternalHandle(window, wndconfig, ctxconfig, fbconfig,externalHandle))
+				return GL_FALSE;
+		}
     }
 
     if (window->monitor)
@@ -986,6 +1233,11 @@ int _glfwPlatformWindowIconified(_GLFWwindow* window)
 int _glfwPlatformWindowVisible(_GLFWwindow* window)
 {
     return IsWindowVisible(window->win32.handle);
+}
+
+void _glfw_custom_poll(_GLFWwindow* window,unsigned int uMsg,unsigned int wparam,long lparam)
+{
+	handle_input(window,uMsg,wparam,lparam);
 }
 
 void _glfwPlatformPollEvents(void)
