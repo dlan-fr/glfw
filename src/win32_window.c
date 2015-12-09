@@ -644,8 +644,8 @@ static LRESULT handle_input(_GLFWwindow* window,UINT uMsg,WPARAM wParam,LPARAM l
         case WM_SYSKEYDOWN:
         {
             const int scancode = (lParam >> 16) & 0x1ff;
-           // const int key = translateKey(wParam, lParam);
-			const int key = (int)wParam;
+            const int key = translateKey(wParam, lParam);
+			//const int key = (int)wParam;
             if (key == _GLFW_KEY_INVALID)
                 break;
 
@@ -685,8 +685,8 @@ static LRESULT handle_input(_GLFWwindow* window,UINT uMsg,WPARAM wParam,LPARAM l
         {
             const int mods = getKeyMods();
             const int scancode = (lParam >> 16) & 0x1ff;
-            //const int key = translateKey(wParam, lParam);
-			const int key = (int)wParam;
+            const int key = translateKey(wParam, lParam);
+			//const int key = (int)wParam;
             if (key == _GLFW_KEY_INVALID)
                 break;
 
@@ -823,6 +823,7 @@ static LRESULT handle_input(_GLFWwindow* window,UINT uMsg,WPARAM wParam,LPARAM l
         }
     }
 
+	return 0;
 }
 
 
